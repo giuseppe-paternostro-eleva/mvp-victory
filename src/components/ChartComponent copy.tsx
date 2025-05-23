@@ -36,12 +36,12 @@ export const ChartComponent = (): JSX.Element => {
   };
 
   const normalizeSeries = (serie: Serie, factor: number): Serie => ({
-  ...serie,
-  data: serie.data.map(d => ({
-    ...d,
-    y: d.y / factor,
-  })),
-});
+    ...serie,
+    data: serie.data.map((d) => ({
+      ...d,
+      y: d.y / factor,
+    })),
+  });
 
   // useEffect to get chart data
   useEffect(() => {
@@ -65,9 +65,19 @@ export const ChartComponent = (): JSX.Element => {
         console.log("🚀 ~ fetchData ~ rawSeries:", rawSeries);
 
         const parsed = parseSeries(rawSeries);
-        
-        console.log("🚀 ~ fetchData ~ parsed:", parsed);
-        setSeries(parsed);
+        const highValueSeries = parsed.find((s) => s.name === "Open Interest");
+
+        const factor = highValueSeries
+          ? Math.max(...highValueSeries.data.map((d) => d.y)) / 100
+          : 1;
+
+        // Normalizza solo quella
+        const normalized = parsed.map((s) =>
+          s.name === "Open Interest" ? normalizeSeries(s, factor) : s
+        );
+
+        setSeries(normalized);
+
       } catch (error) {
         console.error("Errore nella chiamata o parsing:", error);
       }
@@ -102,14 +112,12 @@ export const ChartComponent = (): JSX.Element => {
               tickFormat={(t) => dayjs(t).format("MM-YYYY")}
               style={{ tickLabels: { fontSize: 10 } }}
             />
-
             <VictoryAxis
               dependentAxis
               orientation="right"
               offsetX={600} // 👈 dipende dal width del tuo chart
               style={{ tickLabels: { fontSize: 10 } }}
             />
-
             ≤{/* ASSE Y  */}
             <VictoryAxis
               dependentAxis
