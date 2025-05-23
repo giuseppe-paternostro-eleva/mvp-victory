@@ -1,54 +1,35 @@
-// -- REACT
 import { JSX, useEffect, useState } from "react";
-// -- VICTORY
 import {
   VictoryChart,
   VictoryLine,
   VictoryArea,
   VictoryAxis,
-  VictoryLegend,
   VictoryTooltip,
   VictoryZoomContainer,
   VictoryBrushContainer,
 } from "victory";
-// -- UTILS
 import dayjs from "dayjs";
 import { parseSeries } from "../utils";
-// -- API
 import { fetchForecastData } from "../api/fetchForecastData";
-// -- TYPES
 import { Serie } from "../interface";
 
 export const ChartComponent = (): JSX.Element => {
-  // state
   const [series, setSeries] = useState<Serie[]>([]);
-  // need to set zoom domain for the chart
   const [selectedDomain, setSelectedDomain] = useState<any>(null);
   const [zoomDomain, setZoomDomain] = useState<any>(null);
 
-  // handlers
-  const handleZoom = (domain: any) => {
-    setSelectedDomain(domain);
-  };
+  const tickCount = 10;
 
-  const handleBrush = (domain: any) => {
-    setZoomDomain(domain);
-  };
+  const handleZoom = (domain: any) => setSelectedDomain(domain);
+  const handleBrush = (domain: any) => setZoomDomain(domain);
 
-  const normalizeSeries = (serie: Serie, factor: number): Serie => ({
-  ...serie,
-  data: serie.data.map(d => ({
-    ...d,
-    y: d.y / factor,
-  })),
-});
+  const normalizeY = (y: number, range: [number, number]) =>
+    y / ((range[1] - range[0]) / tickCount);
 
-  // useEffect to get chart data
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // date
-        const from = dayjs().subtract(4, "year").format("YYYY-MM-DD");
+        const from = dayjs().subtract(7, "year").format("YYYY-MM-DD");
         const to = dayjs().format("YYYY-MM-DD");
 
         const res = await fetchForecastData(
@@ -61,13 +42,31 @@ export const ChartComponent = (): JSX.Element => {
         );
 
         const marketKey = Object.keys(res)[0];
-        const rawSeries = res[marketKey].data;
-        console.log("🚀 ~ fetchData ~ rawSeries:", rawSeries);
+        const parsed = parseSeries(res[marketKey].data);
 
-        const parsed = parseSeries(rawSeries);
-        
-        console.log("🚀 ~ fetchData ~ parsed:", parsed);
-        setSeries(parsed);
+        const maxLineY = Math.max(
+          ...parsed
+            .filter((s) => s.type === "line")
+            .flatMap((s) => s.data.map((d) => d.y))
+        );
+
+        const normalized = parsed.map((serie) => {
+          if (serie.type === "area") {
+            const maxAreaY = Math.max(...serie.data.map((d) => d.y));
+
+            if (maxAreaY > maxLineY * 3) {
+              const factor = maxAreaY / maxLineY;
+              return {
+                ...serie,
+                data: serie.data.map((d) => ({ ...d, _originalY: d.y, y: d.y / factor })),
+                _normalizationFactor: factor,
+              };
+            }
+          }
+          return serie;
+        });
+
+        setSeries(normalized);
       } catch (error) {
         console.error("Errore nella chiamata o parsing:", error);
       }
@@ -78,42 +77,30 @@ export const ChartComponent = (): JSX.Element => {
 
   return (
     <div className="p-4 max-w-6xl mx-auto">
-      {/* <h2 className="text-xl font-bold text-center mb-4">
-        TREND DI PREZZO E PREVISIONE
-      </h2> */}
-      {series?.length > 0 ? (
+      {series.length > 0 ? (
         <>
           <VictoryChart
             height={600}
-            width={600}
+            width={900}
             scale={{ x: "time" }}
+            domain={{ y: [0, tickCount] }}
             containerComponent={
               <VictoryZoomContainer
                 zoomDimension="x"
                 zoomDomain={zoomDomain}
                 onZoomDomainChange={handleZoom}
-                allowPan
-                allowZoom
               />
             }
           >
-            {/* ASSE X */}
             <VictoryAxis
               tickFormat={(t) => dayjs(t).format("MM-YYYY")}
               style={{ tickLabels: { fontSize: 10 } }}
             />
 
+            {/* Y SINISTRA */}
             <VictoryAxis
               dependentAxis
-              orientation="right"
-              offsetX={600} // 👈 dipende dal width del tuo chart
-              style={{ tickLabels: { fontSize: 10 } }}
-            />
-
-            ≤{/* ASSE Y  */}
-            <VictoryAxis
-              dependentAxis
-              // style={{ tickLabels: { fontSize: 10 } }}
+              tickCount={tickCount}
               style={{
                 tickLabels: { fontSize: 10 },
                 grid: {
@@ -121,55 +108,64 @@ export const ChartComponent = (): JSX.Element => {
                   strokeDasharray: "10, 5",
                 },
               }}
+              tickFormat={(t) => Math.round(t * (800 / tickCount))}
             />
-            {series.map((serie) => {
-              const commonProps = {
-                data: serie.data,
-                labels: ({ datum }: any) => `${serie.name}: ${datum.y}`,
-                labelComponent: <VictoryTooltip />,
-                style: {
-                  data: {
-                    stroke: serie.color,
-                    fill: serie.type === "area" ? `${serie.color}33` : "none",
-                    strokeWidth: 3,
-                  },
-                },
-              };
 
-              return serie.type === "area" ? (
-                <VictoryArea key={serie.name} {...commonProps} />
+            {/* Y DESTRA */}
+            <VictoryAxis
+              dependentAxis
+              orientation="right"
+              tickCount={tickCount}
+              tickFormat={(t) => {
+                const areaSerie = series.find(
+                  (s) => s.type === "area" && s._normalizationFactor
+                );
+                if (!areaSerie) return t;
+                const factor = areaSerie._normalizationFactor;
+                return `${Math.round((t * factor) / 1000)}K`;
+              }}
+              style={{ tickLabels: { fontSize: 10 } }}
+            />
+
+            {series.map((serie) => {
+              const isArea = serie.type === "area";
+              const yDomain: [number, number] = isArea ? [0, 700000] : [0, 800];
+              const originalY = (datum: any) => datum._originalY || datum.y;
+
+              return isArea ? (
+                <VictoryArea
+                  key={serie.name}
+                  data={serie.data}
+                  y={(d: any) => normalizeY(originalY(d), yDomain)}
+                  labels={({ datum }: any) => `${serie.name}: ${Math.round(originalY(datum))}`}
+                  labelComponent={<VictoryTooltip />}
+                  style={{
+                    data: {
+                      stroke: serie.color,
+                      fill: `${serie.color}33`,
+                      strokeWidth: 2,
+                    },
+                  }}
+                />
               ) : (
-                <VictoryLine key={serie.name} {...commonProps} />
+                <VictoryLine
+                  key={serie.name}
+                  data={serie.data}
+                  y={(d: any) => normalizeY(d.y, yDomain)}
+                  labels={({ datum }: any) => `${serie.name}: ${datum.y}`}
+                  labelComponent={<VictoryTooltip />}
+                  style={{
+                    data: {
+                      stroke: serie.color,
+                      strokeWidth: 2,
+                    },
+                  }}
+                />
               );
             })}
-            {/* Legenda */}
-            {/* <VictoryLegend
-                title="main-legend"
-                x={80}
-                y={10}
-                orientation="horizontal"
-                gutter={20}
-                style={{
-                  labels: { fontSize: 10 },
-                  title: { fontSize: 12, fontWeight: "bold" },
-                }}
-                data={series?.map((s) => ({
-                  name: s?.name || '',
-                  symbol: { fill: s?.color || '' },
-                }))}
-              /> */}
-            {/* <VictoryLegend
-              title="main-legend"
-              data={series
-                .filter((s) => s.name && s.color) // 🔒 importante!
-                .map((s) => ({
-                  name: s.name,
-                  symbol: { fill: s.color },
-                }))}
-            /> */}
           </VictoryChart>
 
-          {/* SLIDER DI BRUSH SOTTO */}
+          {/* BRUSH */}
           <VictoryChart
             height={100}
             scale={{ x: "time" }}
@@ -188,10 +184,10 @@ export const ChartComponent = (): JSX.Element => {
             />
             <VictoryLine
               data={series[0]?.data || []}
+              y={(d: any) => normalizeY(d.y, [0, 800])}
               style={{ data: { stroke: "#ccc" } }}
             />
           </VictoryChart>
-          <VictoryLegend x={125} y={20} />
         </>
       ) : (
         <p>loading</p>

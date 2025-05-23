@@ -8,6 +8,7 @@ export const parseSeries = (rawData: any[]): Serie[] => {
       y: Number(point.y)
     })),
     type: serie.type,
-    color: serie.stroke.color
+    color: serie.stroke.color,
+    _normalizationFactor: 1
   }));
 };

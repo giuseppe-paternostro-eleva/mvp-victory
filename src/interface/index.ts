@@ -6,4 +6,5 @@ export type Serie = {
   data: DataPoint[];
   type: SerieType;
   color: string;
+  _normalizationFactor:number
 };
