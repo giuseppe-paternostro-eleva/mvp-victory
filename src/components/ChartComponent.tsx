@@ -1,4 +1,4 @@
-import { JSX, useEffect, useState } from "react";
+import { JSX, useEffect, useMemo, useState } from 'react';
 import {
   VictoryChart,
   VictoryLine,
@@ -9,9 +9,10 @@ import {
   VictoryBrushContainer,
 } from "victory";
 import dayjs from "dayjs";
-import { parseSeries } from "../utils";
+import { parseSeries, roundToOneSigFig } from '../utils';
 import { fetchForecastData } from "../api/fetchForecastData";
 import { Serie } from "../interface";
+import _ from 'lodash'
 
 export const ChartComponent = (): JSX.Element => {
   const [series, setSeries] = useState<Serie[]>([]);
@@ -20,11 +21,45 @@ export const ChartComponent = (): JSX.Element => {
 
   const tickCount = 10;
 
+  const lineRange = useMemo(() => {
+    if (series.length === 0) return [0, 1];
+    console.log({ series })
+    const lineSeries = series.filter(s => s.type !== "area");
+    /*const min = Math.min(...lineSeries.map(s => Math.min(...s.data.map(d => d.y))));*/
+    const max = Math.max(...lineSeries.map(s => Math.max(...s.data.map(d => d.y))));
+    const adjustedMax = max * 1.1; // Adjusted to give some padding above the max value
+    console.log({ adjustedMax })
+    return [0, roundToOneSigFig(adjustedMax)]; // Adjusted to give some padding above the max value
+  }, [series])
+  console.log(lineRange);
+
+   const areaRange = useMemo(() => {
+    if (series.length === 0) return [0, 1];
+    const areaSeries = series.filter(s => s.type === "area");
+    /*const min = Math.min(...lineSeries.map(s => Math.min(...s.data.map(d => d.y))));*/
+    const max = Math.max(...areaSeries.map(s => Math.max(...s.data.map(d => d.y))));
+    const adjustedMax = max * 1.1; // Adjusted to give some padding above the max value
+    return [0, roundToOneSigFig(adjustedMax)]; // Adjusted to give some padding above the max value
+  }, [series])
+
+  const ticks = 10;
+  const tickValues = _.range(ticks + 1);
+
   const handleZoom = (domain: any) => setSelectedDomain(domain);
   const handleBrush = (domain: any) => setZoomDomain(domain);
 
-  const normalizeY = (y: number, range: [number, number]) =>
-    y / ((range[1] - range[0]) / tickCount);
+  const tickFormat = (range: number[], formattingOptions: { determinant: number, unit?: string} = { determinant: 1 }) => (t: number) => {
+    const { determinant, unit } = formattingOptions;
+    const value = (t * (range[1] - range[0])) / ticks
+    console.log({ value })
+
+    return `${Math.round(value)/determinant}${unit ? ` ${unit}` : ''}`;
+  }
+
+  const normalize =
+    (range: number[]) => (datum: any) =>
+      datum["y"] /
+      ((range[1] - range[0]) / ticks);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -44,29 +79,8 @@ export const ChartComponent = (): JSX.Element => {
         const marketKey = Object.keys(res)[0];
         const parsed = parseSeries(res[marketKey].data);
 
-        const maxLineY = Math.max(
-          ...parsed
-            .filter((s) => s.type === "line")
-            .flatMap((s) => s.data.map((d) => d.y))
-        );
 
-        const normalized = parsed.map((serie) => {
-          if (serie.type === "area") {
-            const maxAreaY = Math.max(...serie.data.map((d) => d.y));
-
-            if (maxAreaY > maxLineY * 3) {
-              const factor = maxAreaY / maxLineY;
-              return {
-                ...serie,
-                data: serie.data.map((d) => ({ ...d, _originalY: d.y, y: d.y / factor })),
-                _normalizationFactor: factor,
-              };
-            }
-          }
-          return serie;
-        });
-
-        setSeries(normalized);
+        setSeries(parsed);
       } catch (error) {
         console.error("Errore nella chiamata o parsing:", error);
       }
@@ -101,6 +115,10 @@ export const ChartComponent = (): JSX.Element => {
             <VictoryAxis
               dependentAxis
               tickCount={tickCount}
+              tickValues={tickValues}
+              tickFormat={tickFormat(
+                lineRange
+              )}
               style={{
                 tickLabels: { fontSize: 10 },
                 grid: {
@@ -108,7 +126,6 @@ export const ChartComponent = (): JSX.Element => {
                   strokeDasharray: "10, 5",
                 },
               }}
-              tickFormat={(t) => Math.round(t * (800 / tickCount))}
             />
 
             {/* Y DESTRA */}
@@ -116,47 +133,43 @@ export const ChartComponent = (): JSX.Element => {
               dependentAxis
               orientation="right"
               tickCount={tickCount}
-              tickFormat={(t) => {
-                const areaSerie = series.find(
-                  (s) => s.type === "area" && s._normalizationFactor
-                );
-                if (!areaSerie) return t;
-                const factor = areaSerie._normalizationFactor;
-                return `${Math.round((t * factor) / 1000)}K`;
-              }}
+              tickValues={tickValues}
+              tickFormat={tickFormat(
+                areaRange, { unit: 'k', determinant: 1000 }
+              )}
               style={{ tickLabels: { fontSize: 10 } }}
             />
 
-            {series.map((serie) => {
-              const isArea = serie.type === "area";
+            {series.map((s) => {
+              const isArea = s.type === "area";
               const yDomain: [number, number] = isArea ? [0, 700000] : [0, 800];
               const originalY = (datum: any) => datum._originalY || datum.y;
 
               return isArea ? (
                 <VictoryArea
-                  key={serie.name}
-                  data={serie.data}
-                  y={(d: any) => normalizeY(originalY(d), yDomain)}
-                  labels={({ datum }: any) => `${serie.name}: ${Math.round(originalY(datum))}`}
+                  key={s.name}
+                  data={s.data}
+                  y={normalize(areaRange)}
+                  labels={({ datum }: any) => `${s.name}: ${Math.round(originalY(datum))}`}
                   labelComponent={<VictoryTooltip />}
                   style={{
                     data: {
-                      stroke: serie.color,
-                      fill: `${serie.color}33`,
+                      stroke: s.color,
+                      fill: `${s.color}33`,
                       strokeWidth: 2,
                     },
                   }}
                 />
               ) : (
                 <VictoryLine
-                  key={serie.name}
-                  data={serie.data}
-                  y={(d: any) => normalizeY(d.y, yDomain)}
-                  labels={({ datum }: any) => `${serie.name}: ${datum.y}`}
+                  key={s.name}
+                  data={s.data}
+                  y={normalize(lineRange)}
+                  labels={({ datum }: any) => `${s.name}: ${datum.y}`}
                   labelComponent={<VictoryTooltip />}
                   style={{
                     data: {
-                      stroke: serie.color,
+                      stroke: s.color,
                       strokeWidth: 2,
                     },
                   }}
@@ -184,7 +197,7 @@ export const ChartComponent = (): JSX.Element => {
             />
             <VictoryLine
               data={series[0]?.data || []}
-              y={(d: any) => normalizeY(d.y, [0, 800])}
+              y={"y"}
               style={{ data: { stroke: "#ccc" } }}
             />
           </VictoryChart>
