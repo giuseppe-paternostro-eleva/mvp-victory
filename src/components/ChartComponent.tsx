@@ -1,4 +1,4 @@
-import { JSX, useEffect, useMemo, useState } from 'react';
+import { JSX, useEffect, useMemo, useState } from "react";
 import {
   VictoryChart,
   VictoryLine,
@@ -9,10 +9,10 @@ import {
   VictoryBrushContainer,
 } from "victory";
 import dayjs from "dayjs";
-import { parseSeries, roundToOneSigFig } from '../utils';
+import { parseSeries, roundToOneSigFig } from "../utils";
 import { fetchForecastData } from "../api/fetchForecastData";
 import { Serie } from "../interface";
-import _ from 'lodash'
+import _ from "lodash";
 
 export const ChartComponent = (): JSX.Element => {
   const [series, setSeries] = useState<Serie[]>([]);
@@ -23,24 +23,34 @@ export const ChartComponent = (): JSX.Element => {
 
   const lineRange = useMemo(() => {
     if (series.length === 0) return [0, 1];
-    console.log({ series })
-    const lineSeries = series.filter(s => s.type !== "area");
+    console.log({ series });
+    const lineSeries = series.filter((s) => s.type !== "area");
     /*const min = Math.min(...lineSeries.map(s => Math.min(...s.data.map(d => d.y))));*/
-    const max = Math.max(...lineSeries.map(s => Math.max(...s.data.map(d => d.y))));
+    const allYValues = lineSeries.flatMap((s) => s.data.map((d) => d.y));
+    const min = Math.min(...allYValues);
+    const max = Math.max(...allYValues);
+    // const max = Math.max(
+    //   ...lineSeries.map((s) => Math.max(...s.data.map((d) => d.y)))
+    // );
     const adjustedMax = max * 1.1; // Adjusted to give some padding above the max value
-    console.log({ adjustedMax })
-    return [0, roundToOneSigFig(adjustedMax)]; // Adjusted to give some padding above the max value
-  }, [series])
+    const adjustedMin = min * 0.9; // Adjusted to give some padding below the min value
+    console.log({ adjustedMax });
+    return [Math.floor(adjustedMin), roundToOneSigFig(adjustedMax)]; // Adjusted to give some padding above the max value
+  }, [series]);
   console.log(lineRange);
+  
 
-   const areaRange = useMemo(() => {
+  const areaRange = useMemo(() => {
     if (series.length === 0) return [0, 1];
-    const areaSeries = series.filter(s => s.type === "area");
+    const areaSeries = series.filter((s) => s.type === "area");
     /*const min = Math.min(...lineSeries.map(s => Math.min(...s.data.map(d => d.y))));*/
-    const max = Math.max(...areaSeries.map(s => Math.max(...s.data.map(d => d.y))));
+    const max = Math.max(
+      ...areaSeries.map((s) => Math.max(...s.data.map((d) => d.y)))
+    );
     const adjustedMax = max * 1.1; // Adjusted to give some padding above the max value
     return [0, roundToOneSigFig(adjustedMax)]; // Adjusted to give some padding above the max value
-  }, [series])
+  }, [series]);
+  
 
   const ticks = 10;
   const tickValues = _.range(ticks + 1);
@@ -48,18 +58,40 @@ export const ChartComponent = (): JSX.Element => {
   const handleZoom = (domain: any) => setSelectedDomain(domain);
   const handleBrush = (domain: any) => setZoomDomain(domain);
 
-  const tickFormat = (range: number[], formattingOptions: { determinant: number, unit?: string} = { determinant: 1 }) => (t: number) => {
-    const { determinant, unit } = formattingOptions;
-    const value = (t * (range[1] - range[0])) / ticks
-    console.log({ value })
+  // const tickFormat =
+  //   (
+  //     range: number[],
+  //     formattingOptions: { determinant: number; unit?: string } = {
+  //       determinant: 1,
+  //     }
+  //   ) =>
+  //   (t: number) => {
+  //     const { determinant, unit } = formattingOptions;
+  //     const value = (t * (range[1] - range[0])) / ticks;
+  //     console.log({ value });
 
-    return `${Math.round(value)/determinant}${unit ? ` ${unit}` : ''}`;
-  }
+  //     return `${Math.round(value) / determinant}${unit ? ` ${unit}` : ""}`;
+  //   };
 
-  const normalize =
-    (range: number[]) => (datum: any) =>
-      datum["y"] /
-      ((range[1] - range[0]) / ticks);
+  // tickformat considerng also the min value of the range
+  const tickFormat =
+    (
+      range: number[],
+      formattingOptions: { determinant: number; unit?: string } = {
+        determinant: 1,
+      }
+    ) =>
+    (t: number) => {
+      const { determinant, unit } = formattingOptions;
+      const value = range[0] + (t * (range[1] - range[0])) / ticks;
+      return `${Math.round(value) / determinant}${unit ? ` ${unit}` : ""}`;
+    };
+
+  // const normalize = (range: number[]) => (datum: any) =>
+  //   datum["y"] / ((range[1] - range[0]) / ticks);
+  // normalize function to normalize the y values based on the range and ticks considering also min
+  const normalize = (range: number[]) => (datum: any) =>
+    (datum["y"] - range[0]) / ((range[1] - range[0]) / ticks);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -78,7 +110,6 @@ export const ChartComponent = (): JSX.Element => {
 
         const marketKey = Object.keys(res)[0];
         const parsed = parseSeries(res[marketKey].data);
-
 
         setSeries(parsed);
       } catch (error) {
@@ -116,9 +147,7 @@ export const ChartComponent = (): JSX.Element => {
               dependentAxis
               tickCount={tickCount}
               tickValues={tickValues}
-              tickFormat={tickFormat(
-                lineRange
-              )}
+              tickFormat={tickFormat(lineRange)}
               style={{
                 tickLabels: { fontSize: 10 },
                 grid: {
@@ -134,9 +163,10 @@ export const ChartComponent = (): JSX.Element => {
               orientation="right"
               tickCount={tickCount}
               tickValues={tickValues}
-              tickFormat={tickFormat(
-                areaRange, { unit: 'k', determinant: 1000 }
-              )}
+              tickFormat={tickFormat(areaRange, {
+                unit: "k",
+                determinant: 1000,
+              })}
               style={{ tickLabels: { fontSize: 10 } }}
             />
 
@@ -150,7 +180,9 @@ export const ChartComponent = (): JSX.Element => {
                   key={s.name}
                   data={s.data}
                   y={normalize(areaRange)}
-                  labels={({ datum }: any) => `${s.name}: ${Math.round(originalY(datum))}`}
+                  labels={({ datum }: any) =>
+                    `${s.name}: ${Math.round(originalY(datum))}`
+                  }
                   labelComponent={<VictoryTooltip />}
                   style={{
                     data: {
