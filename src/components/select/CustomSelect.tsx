@@ -6,14 +6,9 @@ export type Option = {
   label: string;
 };
 
-type SelectProps = {
-  value: string;
-  setValue: (value: string) => void;
-  options: Option[];
-  label?: string;
-};
+import { ToolbarSelect } from '../forecastToolbar/forecast-toolbar';
 
-const Select: React.FC<SelectProps> = ({ value, setValue, options, label }) => {
+const Select: React.FC<ToolbarSelect> = ({ value, setValue, options, label }) => {
   return (
     <div className="select-wrapper">
       {label && <label className="select-label">{label}</label>}
