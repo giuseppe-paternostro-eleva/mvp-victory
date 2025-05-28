@@ -14,11 +14,26 @@ import { fetchForecastData } from "../api/fetchForecastData";
 import { Serie } from "../interface";
 import _ from "lodash";
 import { fetchMetaData } from "../api/fetchMetaData";
+import Select from "./select/CustomSelect";
+import { MarketMetaData } from "../interface";
+
+// Questi dati "frequency dovrebbero provenire dall'API, ma per ora sono hardcoded
+const frequencyOptions = [
+  { label: "daily", value: "daily" },
+  { label: "monthly", value: "monthly" },
+  { label: "yearly", value: "yearly" },
+];
 
 export const ChartComponent = (): JSX.Element => {
   const [series, setSeries] = useState<Serie[]>([]);
   const [selectedDomain, setSelectedDomain] = useState<any>(null);
   const [zoomDomain, setZoomDomain] = useState<any>(null);
+  const [frequency, setFrequency] = useState<string>("monthly");
+  const [metaData, setMetaData] = useState<MarketMetaData[] | null>([]);
+  const [selectedMarket, setSelectedMarket] = useState<string | null>(null);
+  const [selectedIndicator, setSelectedIndicator] = useState<string | null>(
+    null
+  );
 
   const tickCount = 10;
 
@@ -39,7 +54,6 @@ export const ChartComponent = (): JSX.Element => {
     return [Math.floor(adjustedMin), roundToOneSigFig(adjustedMax)]; // Adjusted to give some padding above the max value
   }, [series]);
   console.log(lineRange);
-  
 
   const areaRange = useMemo(() => {
     if (series.length === 0) return [0, 1];
@@ -51,7 +65,6 @@ export const ChartComponent = (): JSX.Element => {
     const adjustedMax = max * 1.1; // Adjusted to give some padding above the max value
     return [0, roundToOneSigFig(adjustedMax)]; // Adjusted to give some padding above the max value
   }, [series]);
-  
 
   const ticks = 10;
   const tickValues = _.range(ticks + 1);
@@ -94,6 +107,22 @@ export const ChartComponent = (): JSX.Element => {
   const normalize = (range: number[]) => (datum: any) =>
     (datum["y"] - range[0]) / ((range[1] - range[0]) / ticks);
 
+  // metaData ordered by value
+  const marketOptions = metaData?.map((mkt) => ({
+    value: mkt.value,
+    label: mkt.value,
+  }));
+
+  const selectedMarketData = metaData?.find(
+    (mkt) => mkt.value === selectedMarket
+  );
+
+  const indicatorOptions =
+    selectedMarketData?.financialIndicator.map((ind) => ({
+      value: ind.value,
+      label: ind.value,
+    })) ?? [];
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -101,13 +130,15 @@ export const ChartComponent = (): JSX.Element => {
         const to = dayjs().format("YYYY-MM-DD");
 
         const metaData = await fetchMetaData("mais");
-        console.log("🚀 ~ fetchData ~ metaData:", metaData)
+        const marketAndFinancialIndicators:MarketMetaData[] = metaData?.tradeExchange ?? [];
+        setMetaData(marketAndFinancialIndicators);
+        console.log("🚀 ~ fetchData ~ metaData:", metaData);
 
         const res = await fetchForecastData(
           "mais",
-          "CBOT",
-          "monthly",
-          "Open Interest",
+          selectedMarket,
+          frequency,
+          selectedIndicator,
           from,
           to
         );
@@ -122,10 +153,47 @@ export const ChartComponent = (): JSX.Element => {
     };
 
     fetchData();
-  }, []);
+  }, [frequency,selectedIndicator,selectedMarket]);
+
+  useEffect(() => {
+  if (metaData && metaData.length > 0 && !selectedMarket) {
+    const defaultMarket = metaData[0];
+    setSelectedMarket(defaultMarket.value);
+
+    const firstIndicator = defaultMarket.financialIndicator[0];
+    if (firstIndicator) {
+      setSelectedIndicator(firstIndicator.value);
+    }
+  }
+}, [metaData]);
 
   return (
     <div className="p-4 max-w-6xl mx-auto">
+      <div className="selectContainer">
+        <Select
+          options={frequencyOptions}
+          setValue={setFrequency}
+          label="frequency"
+          value={frequency}
+        />
+        <Select
+          label="Market"
+          options={marketOptions ?? []}
+          value={selectedMarket || ""}
+          setValue={(val) => {
+            setSelectedMarket(val);
+            setSelectedIndicator(null); // reset indicator quando cambia il market
+          }}
+        />
+
+        <Select
+          label="Financial Indicator"
+          options={indicatorOptions}
+          value={selectedIndicator || ""}
+          setValue={setSelectedIndicator}
+        />
+      </div>
+
       {series.length > 0 ? (
         <>
           <VictoryChart
@@ -216,9 +284,9 @@ export const ChartComponent = (): JSX.Element => {
 
           {/* BRUSH */}
           <VictoryChart
-            height={100}
-            scale={{ x: "time" }}
-            padding={{ top: 0, left: 60, right: 60, bottom: 30 }}
+            height={40}
+            scale={{ x: "linear", y: "time" }}
+            padding={{ top: 10, left: 25, right: 25, bottom: 0 }}
             containerComponent={
               <VictoryBrushContainer
                 brushDimension="x"
@@ -233,8 +301,9 @@ export const ChartComponent = (): JSX.Element => {
             />
             <VictoryLine
               data={series[0]?.data || []}
-              y={"y"}
+              y={normalize(lineRange)}
               style={{ data: { stroke: "#ccc" } }}
+              key={series[0]?.name}
             />
           </VictoryChart>
         </>

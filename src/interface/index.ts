@@ -8,3 +8,14 @@ export type Serie = {
   color: string;
   _normalizationFactor:number
 };
+
+export type FinancialIndicator = {
+  id: number;
+  value: string;
+};
+
+export type MarketMetaData = {
+  id: number;
+  value: string; // es. "CBOT"
+  financialIndicator: FinancialIndicator[];
+};
