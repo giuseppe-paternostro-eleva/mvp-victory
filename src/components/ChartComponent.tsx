@@ -13,6 +13,7 @@ import { parseSeries, roundToOneSigFig } from "../utils";
 import { fetchForecastData } from "../api/fetchForecastData";
 import { Serie } from "../interface";
 import _ from "lodash";
+import { fetchMetaData } from "../api/fetchMetaData";
 
 export const ChartComponent = (): JSX.Element => {
   const [series, setSeries] = useState<Serie[]>([]);
@@ -99,9 +100,12 @@ export const ChartComponent = (): JSX.Element => {
         const from = dayjs().subtract(7, "year").format("YYYY-MM-DD");
         const to = dayjs().format("YYYY-MM-DD");
 
+        const metaData = await fetchMetaData("mais");
+        console.log("🚀 ~ fetchData ~ metaData:", metaData)
+
         const res = await fetchForecastData(
           "mais",
-          "CBOT €/t",
+          "CBOT",
           "monthly",
           "Open Interest",
           from,
