@@ -1,0 +1,35 @@
+.chart-iframe-wrapper {
+  padding: 1.5rem;
+  max-width: 100%;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f9f9f9;
+  color: #333;
+  box-sizing: border-box;
+  .toolbar{
+    padding: 0 1rem;
+  }
+
+  .chart-container {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: white;
+    padding: 1rem;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  }
+
+  .victory-tooltip {
+    font-family: monospace;
+  }
+}
+
+@media (max-width: 600px) {
+  .chart-iframe-wrapper {
+    padding: 1rem;
+  }
+
+  .select-wrapper {
+    flex: 1 1 100%;
+  }
+}

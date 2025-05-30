@@ -1,5 +1,5 @@
 import "./App.scss";
-import { ChartComponent } from "./components/ChartComponent";
+import { ChartComponent } from "./components/chartComponent/ChartComponent";
 
 function App() {
   return (

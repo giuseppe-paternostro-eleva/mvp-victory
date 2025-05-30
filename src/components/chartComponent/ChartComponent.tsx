@@ -9,15 +9,17 @@ import {
   VictoryBrushContainer,
 } from "victory";
 import dayjs from "dayjs";
-import { parseSeries, roundToOneSigFig } from "../utils";
-import { fetchForecastData } from "../api/fetchForecastData";
-import { Serie } from "../interface";
+import { parseSeries, roundToOneSigFig } from "../../utils";
+import { fetchForecastData } from "../../api/fetchForecastData";
+import { Serie } from "../../interface";
 import _ from "lodash";
-import { fetchMetaData } from "../api/fetchMetaData";
-import Select from "./select/CustomSelect";
-import { MarketMetaData } from "../interface";
+import { fetchMetaData } from "../../api/fetchMetaData";
+import Select from "../select/CustomSelect";
+import { MarketMetaData } from "../../interface";
 import { createContainer } from "victory";
-import { ForecastToolbar } from "./forecastToolbar/ForecastToolbar";
+import { ForecastToolbar } from "../forecastToolbar/ForecastToolbar";
+import { Loader } from "../loader/Loader";
+import { VictoryLegend, VictoryLabel } from "victory";
 
 // Questi dati "frequency dovrebbero provenire dall'API, ma per ora sono hardcoded
 const frequencyOptions = [
@@ -36,6 +38,7 @@ export const ChartComponent = (): JSX.Element => {
   const [selectedIndicator, setSelectedIndicator] = useState<string | null>(
     null
   );
+  const [loading, setLoading] = useState<boolean>(false);
 
   const VictoryZoomVoronoiContainer = createContainer("zoom", "voronoi");
 
@@ -57,7 +60,6 @@ export const ChartComponent = (): JSX.Element => {
     console.log({ adjustedMax });
     return [Math.floor(adjustedMin), roundToOneSigFig(adjustedMax)]; // Adjusted to give some padding above the max value
   }, [series]);
-  console.log(lineRange);
 
   const areaRange = useMemo(() => {
     if (series.length === 0) return [0, 1];
@@ -113,6 +115,7 @@ export const ChartComponent = (): JSX.Element => {
 
   const normalizedLineY = useMemo(() => normalize(lineRange), [lineRange]);
   const normalizedAreaY = useMemo(() => normalize(areaRange), [areaRange]);
+  const hasAreaSeries = series.some((s) => s.type === "area");
 
   // metaData ordered by value
   const marketOptions = metaData?.map((mkt) => ({
@@ -132,6 +135,7 @@ export const ChartComponent = (): JSX.Element => {
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       try {
         const from = dayjs().subtract(7, "year").format("YYYY-MM-DD");
         const to = dayjs().format("YYYY-MM-DD");
@@ -157,6 +161,8 @@ export const ChartComponent = (): JSX.Element => {
         setSeries(parsed);
       } catch (error) {
         console.error("Errore nella chiamata o parsing:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -176,8 +182,8 @@ export const ChartComponent = (): JSX.Element => {
   }, [metaData]);
 
   return (
-    <div className="p-4 max-w-6xl mx-auto">
-      <div className="selectContainer">
+    <div className="chart-iframe-wrapper">
+      <div className="toolbar">
         <ForecastToolbar
           selects={[
             {
@@ -204,151 +210,178 @@ export const ChartComponent = (): JSX.Element => {
           ]}
         />
       </div>
-
-      {series.length > 0 ? (
-        <>
-          <VictoryChart
-            height={600}
-            width={900}
-            scale={{ x: "time" }}
-            domain={{ y: [0, tickCount] }}
-            containerComponent={
-              <VictoryZoomVoronoiContainer
-                zoomDimension="x"
-                zoomDomain={zoomDomain}
-                onZoomDomainChange={handleZoom}
-                voronoiDimension="x"
-                onActivated={(points) => {
-                  if (points.length > 0) {
-                    console.log("👉 Punto selezionato:", points[0]);
-                    // setSelectedPoint(points[0]); // se vuoi mostrarlo sotto
+      <div className="chart-container">
+        {series.length > 0 && !loading ? (
+          <>
+            <VictoryChart
+              height={600}
+              width={900}
+              scale={{ x: "time" }}
+              domain={{ y: [0, tickCount] }}
+              containerComponent={
+                <VictoryZoomVoronoiContainer
+                  zoomDimension="x"
+                  zoomDomain={zoomDomain}
+                  onZoomDomainChange={handleZoom}
+                  voronoiDimension="x"
+                  // onActivated={(points) => {
+                  //   if (points.length > 0) {
+                  //     console.log("👉 Punto selezionato:", points[0]);
+                  //     // setSelectedPoint(points[0]); // se vogliamo mostrarlo sotto
+                  //   }
+                  // }}
+                  activateData
+                  labels={({ datum }) => `${datum.y}`}
+                  labelComponent={
+                    <VictoryTooltip
+                      flyoutStyle={{
+                        fill: "#ffffff",
+                        stroke: "#2d7ff9",
+                        strokeWidth: 1,
+                        filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.2))",
+                      }}
+                      cornerRadius={6}
+                      pointerLength={8}
+                      style={{
+                        fontSize: 12,
+                        fontFamily: "monospace",
+                        fill: "#333",
+                      }}
+                    />
                   }
+                />
+              }
+            >
+              <VictoryAxis
+                tickFormat={(t) => dayjs(t).format("MM-YYYY")}
+                style={{ tickLabels: { fontSize: 10 } }}
+              />
+
+              {/* Y SINISTRA */}
+              <VictoryAxis
+                dependentAxis
+                tickCount={tickCount}
+                tickValues={tickValues}
+                tickFormat={tickFormat(lineRange)}
+                style={{
+                  tickLabels: { fontSize: 10 },
+                  grid: {
+                    stroke: ({ tick }) => (tick === 5 ? "#2d7ff9" : "#CFD8DC"),
+                    strokeDasharray: "10, 5",
+                  },
                 }}
-                activateData
-                labels={({ datum }) => `${datum.y}`}
-                labelComponent={
-                  <VictoryTooltip
-                    flyoutStyle={{
-                      fill: "#ffffff",
-                      stroke: "#2d7ff9",
-                      strokeWidth: 1,
-                      filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.2))",
-                    }}
-                    cornerRadius={6}
-                    pointerLength={8}
+              />
+
+              {/* Y DESTRA */}
+              {hasAreaSeries && (
+                <VictoryAxis
+                  dependentAxis
+                  orientation="right"
+                  tickCount={tickCount}
+                  tickValues={tickValues}
+                  tickFormat={tickFormat(areaRange, {
+                    unit: "k",
+                    determinant: 1000,
+                  })}
+                  style={{ tickLabels: { fontSize: 10 } }}
+                />
+              )}
+
+              {series.map((s) => {
+                const isArea = s.type === "area";
+                // const yDomain: [number, number] = isArea ? [0, 700000] : [0, 800];
+                const originalY = (datum: any) => datum._originalY || datum.y;
+
+                return isArea ? (
+                  <VictoryArea
+                    key={s.name}
+                    name={s.name}
+                    data={s.data}
+                    y={normalizedAreaY}
+                    // labels={({ datum }: any) =>
+                    //   `${s.name}: ${Math.round(originalY(datum))}`
+                    // }
+                    // labelComponent={<VictoryTooltip />}
                     style={{
-                      fontSize: 12,
-                      fontFamily: "monospace",
-                      fill: "#333",
+                      data: {
+                        stroke: s.color,
+                        fill: `${s.color}33`,
+                        strokeWidth: 2,
+                      },
                     }}
                   />
-                }
-              />
-            }
-          >
-            <VictoryAxis
-              tickFormat={(t) => dayjs(t).format("MM-YYYY")}
-              style={{ tickLabels: { fontSize: 10 } }}
-            />
-
-            {/* Y SINISTRA */}
-            <VictoryAxis
-              dependentAxis
-              tickCount={tickCount}
-              tickValues={tickValues}
-              tickFormat={tickFormat(lineRange)}
-              style={{
-                tickLabels: { fontSize: 10 },
-                grid: {
-                  stroke: ({ tick }) => (tick === 5 ? "#2d7ff9" : "#CFD8DC"),
-                  strokeDasharray: "10, 5",
-                },
-              }}
-            />
-
-            {/* Y DESTRA */}
-            <VictoryAxis
-              dependentAxis
-              orientation="right"
-              tickCount={tickCount}
-              tickValues={tickValues}
-              tickFormat={tickFormat(areaRange, {
-                unit: "k",
-                determinant: 1000,
+                ) : (
+                  <VictoryLine
+                    key={s.name}
+                    name={s.name}
+                    data={s.data}
+                    y={normalizedLineY}
+                    // labels={({ datum }: any) => `${s.name}: ${datum.y}`}
+                    // labelComponent={<VictoryTooltip />}
+                    style={{
+                      data: {
+                        stroke: s.color,
+                        strokeWidth: 2,
+                      },
+                    }}
+                  />
+                );
               })}
-              style={{ tickLabels: { fontSize: 10 } }}
-            />
+            </VictoryChart>
 
-            {series.map((s) => {
-              const isArea = s.type === "area";
-              // const yDomain: [number, number] = isArea ? [0, 700000] : [0, 800];
-              const originalY = (datum: any) => datum._originalY || datum.y;
-
-              return isArea ? (
-                <VictoryArea
-                  key={s.name}
-                  name={s.name}
-                  data={s.data}
-                  y={normalizedAreaY}
-                  // labels={({ datum }: any) =>
-                  //   `${s.name}: ${Math.round(originalY(datum))}`
-                  // }
-                  // labelComponent={<VictoryTooltip />}
-                  style={{
-                    data: {
-                      stroke: s.color,
-                      fill: `${s.color}33`,
-                      strokeWidth: 2,
-                    },
-                  }}
+            {/* BRUSH */}
+            <VictoryChart
+              height={50}
+              scale={{ x: "time" }}
+              padding={{ top: 0, left: 25, right: 25, bottom: 20 }}
+              containerComponent={
+                <VictoryBrushContainer
+                  brushDimension="x"
+                  brushDomain={selectedDomain}
+                  onBrushDomainChange={handleBrush}
                 />
-              ) : (
-                <VictoryLine
-                  key={s.name}
-                  name={s.name}
-                  data={s.data}
-                  y={normalizedLineY}
-                  // labels={({ datum }: any) => `${s.name}: ${datum.y}`}
-                  // labelComponent={<VictoryTooltip />}
-                  style={{
-                    data: {
-                      stroke: s.color,
-                      strokeWidth: 2,
-                    },
-                  }}
-                />
-              );
-            })}
-          </VictoryChart>
-
-          {/* BRUSH */}
-          <VictoryChart
-            height={40}
-            scale={{ x: "linear" }}
-            padding={{ top: 10, left: 25, right: 25, bottom: 0 }}
-            containerComponent={
-              <VictoryBrushContainer
-                brushDimension="x"
-                brushDomain={selectedDomain}
-                onBrushDomainChange={handleBrush}
+              }
+            >
+              <VictoryAxis
+                tickFormat={(t) => dayjs(t).format("YY")}
+                style={{ tickLabels: { fontSize: 6 } }}
               />
-            }
-          >
-            <VictoryAxis
-              tickFormat={(t) => dayjs(t).format("YY")}
-              style={{ tickLabels: { fontSize: 8 } }}
+              <VictoryLine
+                data={series[0]?.data || []}
+                y={normalizedLineY}
+                style={{ data: { stroke: "#ccc" } }}
+              />
+            </VictoryChart>
+            {/* legend */}
+            <VictoryLegend
+              orientation="horizontal"
+              gutter={20}
+              height={30}
+              symbolSpacer={5}
+              itemsPerRow={4}
+              data={series.map((s) => ({
+                name: s.name,
+                symbol: { fill: s.color },
+              }))}
+              style={{
+                labels: { fontSize: 8 },
+                border: { stroke: "transparent" },
+              }}
+              // labelComponent={
+              // <VictoryLabel
+              //   events={{
+              //     onClick: (e:any,props) => {
+              //       console.log("Legend clicked",e,props);
+              //     },
+              //   }}
+              // />
+              // }
             />
-            <VictoryLine
-              data={series[0]?.data || []}
-              y={normalizedLineY}
-              style={{ data: { stroke: "#ccc" } }}
-              key={series[0]?.name}
-            />
-          </VictoryChart>
-        </>
-      ) : (
-        <p>loading</p>
-      )}
+          </>
+        ) : (
+          <Loader />
+        )}
+      </div>
     </div>
   );
 };
