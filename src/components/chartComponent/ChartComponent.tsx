@@ -40,6 +40,7 @@ export const ChartComponent = (): JSX.Element => {
     null
   );
   const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<boolean>(false);
 
   const VictoryZoomVoronoiContainer = createContainer("zoom", "voronoi");
 
@@ -138,6 +139,7 @@ export const ChartComponent = (): JSX.Element => {
     const fetchData = async () => {
       setLoading(true);
       try {
+        setError(false); 
         const from = dayjs().subtract(7, "year").format("YYYY-MM-DD");
         const to = dayjs().format("YYYY-MM-DD");
 
@@ -162,6 +164,7 @@ export const ChartComponent = (): JSX.Element => {
 
         setSeries(parsed);
       } catch (error) {
+        setError(true);
         console.error("Errore nella chiamata o parsing:", error);
       } finally {
         setLoading(false);
@@ -213,7 +216,7 @@ export const ChartComponent = (): JSX.Element => {
         />
       </div>
       <div className="chart-container">
-        {series.length > 0 && !loading ? (
+        {series.length > 0 && !loading && !error ? (
           <>
             <VictoryChart
               height={600}
@@ -389,6 +392,8 @@ export const ChartComponent = (): JSX.Element => {
               />
             </div>
           </>
+        ) : error ? (
+          <div className="errorMessage">Si è verificato un errore durante il caricamento dei dati.</div>
         ) : (
           <Loader />
         )}
