@@ -1,0 +1,69 @@
+.forecast-table {
+    max-width: 1200px;
+    padding: 1rem;
+    background-color: rgb(255, 255, 255);
+    border: 1px solid #ccc;
+    border-radius: 10px;
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 13px;
+
+    thead th {
+      text-align: center;
+      padding: 0.5rem;
+      border-bottom: 2px solid #333;
+        vertical-align: baseline;
+
+      .th-title {
+        font-weight: 600;
+      }
+
+      .th-subtitle {
+        font-size: 11px;
+        color: #777;
+        margin-top: 0.2rem;
+      }
+    }
+
+    tbody {
+      tr {
+        &:nth-child(odd) {
+          background-color: #f9f9f9;
+        }
+      }
+    }
+
+    tbody td {
+      text-align: center;
+      padding: 0.7rem 0.5rem;
+    //   border-bottom: 1px solid #333;
+      vertical-align: middle;
+      min-height: 3rem;
+      &:hover{
+        background-color: #f0f0f0;
+      }
+    }
+
+    .forecast-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+
+      .label {
+        font-weight: 600;
+        margin-bottom: 2px;
+      }
+
+      .icon {
+        margin-bottom: 2px;
+      }
+
+      .range {
+        font-size: 11px;
+        color: #333;
+      }
+    }
+  }
+}

@@ -1,11 +1,13 @@
 import "./App.scss";
 import { ChartComponent } from "./components/chartComponent/ChartComponent";
+import { TableComponent } from "./components/TableComponent/TableComponent";
 
 function App() {
   return (
     <div className="App">
       <div className="chartContainer">
-        <ChartComponent />
+        {/* <ChartComponent /> */}
+    <TableComponent/>
       </div>
     </div>
   );
