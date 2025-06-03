@@ -20,6 +20,7 @@ import { createContainer } from "victory";
 import { ForecastToolbar } from "../forecastToolbar/ForecastToolbar";
 import { Loader } from "../loader/Loader";
 import { VictoryLegend, VictoryLabel } from "victory";
+import "./chart-component.scss";
 
 // Questi dati "frequency dovrebbero provenire dall'API, ma per ora sono hardcoded
 const frequencyOptions = [
@@ -148,9 +149,10 @@ export const ChartComponent = (): JSX.Element => {
 
         const res = await fetchForecastData(
           "mais",
-          selectedMarket,
+          selectedMarket ?? metaData?.tradeExchange[0]?.value,
           frequency,
-          selectedIndicator,
+          selectedIndicator ??
+            metaData?.tradeExchange[0]?.financialIndicator[0]?.value,
           from,
           to
         );
@@ -215,7 +217,7 @@ export const ChartComponent = (): JSX.Element => {
           <>
             <VictoryChart
               height={600}
-              width={900}
+              width={800}
               scale={{ x: "time" }}
               domain={{ y: [0, tickCount] }}
               containerComponent={
@@ -254,7 +256,10 @@ export const ChartComponent = (): JSX.Element => {
             >
               <VictoryAxis
                 tickFormat={(t) => dayjs(t).format("MM-YYYY")}
-                style={{ tickLabels: { fontSize: 10 } }}
+                style={{
+                  tickLabels: { fontSize: 10 },
+                  axis: { stroke: "#CFD8DC" },
+                }}
               />
 
               {/* Y SINISTRA */}
@@ -264,7 +269,8 @@ export const ChartComponent = (): JSX.Element => {
                 tickValues={tickValues}
                 tickFormat={tickFormat(lineRange)}
                 style={{
-                  tickLabels: { fontSize: 10 },
+                  tickLabels: { fontSize: 11 },
+                  axis: { stroke: "#CFD8DC" },
                   grid: {
                     stroke: ({ tick }) => (tick === 5 ? "#2d7ff9" : "#CFD8DC"),
                     strokeDasharray: "10, 5",
@@ -283,7 +289,10 @@ export const ChartComponent = (): JSX.Element => {
                     unit: "k",
                     determinant: 1000,
                   })}
-                  style={{ tickLabels: { fontSize: 10 } }}
+                  style={{
+                    tickLabels: { fontSize: 11 },
+                    axis: { stroke: "#CFD8DC" },
+                  }}
                 />
               )}
 
@@ -329,54 +338,56 @@ export const ChartComponent = (): JSX.Element => {
               })}
             </VictoryChart>
 
-            {/* BRUSH */}
-            <VictoryChart
-              height={50}
-              scale={{ x: "time" }}
-              padding={{ top: 0, left: 25, right: 25, bottom: 20 }}
-              containerComponent={
-                <VictoryBrushContainer
-                  brushDimension="x"
-                  brushDomain={selectedDomain}
-                  onBrushDomainChange={handleBrush}
+            <div className="brushAndlegendContainer">
+              {/* BRUSH */}
+              <VictoryChart
+                height={50}
+                scale={{ x: "time" }}
+                padding={{ top: 0, left: 0, right: 25, bottom: 20 }}
+                containerComponent={
+                  <VictoryBrushContainer
+                    brushDimension="x"
+                    brushDomain={selectedDomain}
+                    onBrushDomainChange={handleBrush}
+                  />
+                }
+              >
+                <VictoryAxis
+                  tickFormat={(t) => dayjs(t).format("YY")}
+                  style={{ tickLabels: { fontSize: 6 } }}
                 />
-              }
-            >
-              <VictoryAxis
-                tickFormat={(t) => dayjs(t).format("YY")}
-                style={{ tickLabels: { fontSize: 6 } }}
+                <VictoryLine
+                  data={series[0]?.data || []}
+                  y={normalizedLineY}
+                  style={{ data: { stroke: "#ccc" } }}
+                />
+              </VictoryChart>
+              {/* legend */}
+              <VictoryLegend
+                orientation="horizontal"
+                gutter={20}
+                height={30}
+                symbolSpacer={5}
+                itemsPerRow={5}
+                data={series.map((s) => ({
+                  name: s.name,
+                  symbol: { fill: s.color },
+                }))}
+                style={{
+                  labels: { fontSize: 8 },
+                  border: { stroke: "transparent" },
+                }}
+                // labelComponent={
+                // <VictoryLabel
+                //   events={{
+                //     onClick: (e:any,props) => {
+                //       console.log("Legend clicked",e,props);
+                //     },
+                //   }}
+                // />
+                // }
               />
-              <VictoryLine
-                data={series[0]?.data || []}
-                y={normalizedLineY}
-                style={{ data: { stroke: "#ccc" } }}
-              />
-            </VictoryChart>
-            {/* legend */}
-            <VictoryLegend
-              orientation="horizontal"
-              gutter={20}
-              height={30}
-              symbolSpacer={5}
-              itemsPerRow={4}
-              data={series.map((s) => ({
-                name: s.name,
-                symbol: { fill: s.color },
-              }))}
-              style={{
-                labels: { fontSize: 8 },
-                border: { stroke: "transparent" },
-              }}
-              // labelComponent={
-              // <VictoryLabel
-              //   events={{
-              //     onClick: (e:any,props) => {
-              //       console.log("Legend clicked",e,props);
-              //     },
-              //   }}
-              // />
-              // }
-            />
+            </div>
           </>
         ) : (
           <Loader />

@@ -1,12 +1,12 @@
 import React from 'react';
 import './custom-select.scss';
+import { ToolbarSelect } from '../forecastToolbar/forecast-toolbar';
 
 export type Option = {
   value: string;
   label: string;
 };
 
-import { ToolbarSelect } from '../forecastToolbar/forecast-toolbar';
 
 const Select: React.FC<ToolbarSelect> = ({ value, setValue, options, label }) => {
   return (
