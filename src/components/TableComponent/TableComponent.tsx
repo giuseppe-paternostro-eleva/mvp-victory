@@ -7,7 +7,6 @@ import { fetchForecastTable } from "../../api/fetchForecastTable";
 // -- ICONS
 import { ArrowUp, ArrowDown, ArrowRight } from "lucide-react";
 
-
 const getIconComponent = (icon: string, color: string) => {
   switch (icon) {
     case "arrow-up":
@@ -22,23 +21,24 @@ const getIconComponent = (icon: string, color: string) => {
 };
 
 type dataTableType = {
-    columns:columnType[];
-    rows:any[]
-    tableType:string;
-}
+  columns: columnType[];
+  rows: any[];
+  tableType: string;
+};
 
 type columnType = {
-    key: string;
-    title: string;
-    subTitle: string;
-}
+  key: string;
+  title: string;
+  subTitle: string | string[];
+  children?: columnType[];
+};
 
 export const TableComponent: FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<boolean>(false);
   const [dataTable, setDataTable] = useState<dataTableType | null>(null);
 
-    useEffect(() => {
+  useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
@@ -57,42 +57,89 @@ export const TableComponent: FC = () => {
 
     fetchData();
   }, []);
-  
+
   return (
     <div className="forecast-table">
       <table>
         <thead>
           <tr>
-            {dataTable?.columns?.map((col, idx) => (
-              <th key={idx}>
-                <div className="th-title">{col.title}</div>
-                <div className="th-subtitle">{col.subTitle}</div>
-              </th>
-            ))}
+            {dataTable?.columns?.map((col, idx) =>
+              col?.key === "previsioniPrezzoMedio" ? (
+                <th key={idx} colSpan={3}>
+                  <div className="th-title">
+                    <h2>{col.title}</h2>
+                    <div className="th-extratitle">
+                      {col.subtitle.map((sub: string, key: number) => (
+                        <h6 key={key}>{sub}</h6>
+                      ))}
+                    </div>
+                  </div>
+                </th>
+              ) : (
+                <th key={idx} rowSpan={2}>
+                  <div className="th-title">
+                    <h2>{col.title}</h2>
+                  </div>
+                  <div className="th-subtitle">{col.subTitle}</div>
+                </th>
+              )
+            )}
+          </tr>
+          <tr>
+            {dataTable?.columns
+              ?.find((col) => col.key === "previsioniPrezzoMedio")
+              ?.children?.map((child, idx) => (
+                <th key={idx}>
+                  <div className="th-title">
+                    <h3>{child.title}</h3>
+                  </div>
+                  <div className="th-subtitle">{child.subTitle}</div>
+                </th>
+              ))}
           </tr>
         </thead>
+
         <tbody>
           {dataTable?.rows?.map((row, rowIdx) => (
             <tr key={rowIdx}>
-              {dataTable.columns.map((col) => {
-                const key = col.key;
-                if (key === "previsione3Mesi") {
-                  const val = row[key];
-                  return (
-                    <td key={key} className="forecast-cell">
-                      {val?.label && <div className="label">{val.label}</div>}
-                      {val?.icon && (
-                        <div className="icon">
-                          {getIconComponent(val.icon, val.iconColor)}
-                        </div>
-                      )}
-                      {val?.range && <div className="range">{val.range}</div>}
-                    </td>
-                  );
-                } else {
-                  return <td key={key}>{row[key]}</td>;
-                }
-              })}
+              {dataTable.columns
+                .map((col) => {
+                  const key = col.key;
+                  if (key === "previsione3Mesi") {
+                    const val = row[key];
+                    return (
+                      <td key={key} className="forecast-cell">
+                        {val?.label && <div className="label">{val.label}</div>}
+                        {val?.icon && (
+                          <div className="icon">
+                            {getIconComponent(val.icon, val.iconColor)}
+                          </div>
+                        )}
+                        {val?.range && <div className="range">{val.range}</div>}
+                      </td>
+                    );
+                  } else if (key === "previsioniPrezzoMedio") {
+                    // <-- QUI TORNA UN ARRAY DI 3 <td>
+                    const previsioni = row[key];
+                    return (
+                      dataTable?.columns
+                        ?.find((c) => c.key === "previsioniPrezzoMedio")
+                        ?.children?.map((child, childIdx) => {
+                          const periodoKey = child.key;
+                          const valori = previsioni[periodoKey];
+                          return (
+                            <td key={periodoKey}>
+                              <div className="arete">{valori?.arete}</div>
+                              <div className="off">{valori?.off}</div>
+                            </td>
+                          );
+                        }) ?? []
+                    );
+                  } else {
+                    return <td key={key}>{row[key]}</td>;
+                  }
+                })
+                .flat()}
             </tr>
           ))}
         </tbody>

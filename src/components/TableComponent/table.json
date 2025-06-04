@@ -1,0 +1,119 @@
+{
+    "tableType": "forecast",
+    "columns": [
+        {
+            "key": "piazza",
+            "title": "PIAZZA",
+            "subTitle": ""
+        },
+        {
+            "key": "prezzoMedioCampagna",
+            "title": "PREZZO MEDIO DI CAMPAGNA",
+            "subTitle": "set 24-ago 25"
+        },
+        {
+            "key": "ultimoPrezzo",
+            "title": "ULTIMO PREZZO",
+            "subTitle": "Tempo Reale"
+        },
+        {
+            "key": "previsione3Mesi",
+            "title": "PREVISIONE 3 MESI",
+            "subTitle": "Areté"
+        },
+        {
+            "key":"previsioniPrezzoMedio",
+            "title": "PREVISIONI PREZZO MEDIO",
+            "subTitle":["Previsione su dati Areté","Previsione su dati ufficiali"],
+            "children":[
+                {
+                    "key":"cc",
+                    "title":"Campagna Corrente",
+                    "subTitle": "set 24 - ago 25"
+                },
+                                {
+                    "key":"mr",
+                    "title":"Mesi residui",
+                    "subTitle": "giu 24 - lug 25"
+                },
+                                {
+                    "key":"cs",
+                    "title":"Campagna Successiva",
+                    "subTitle": "ago 24 - lug 25"
+                }
+            ]
+        }
+    ],
+    "rows": [
+        {
+            "piazza": "CBOT €/t",
+            "prezzoMedioCampagna": "459,40",
+            "ultimoPrezzo": "02/06/2025 13:01 440,25 (-3.75 / -0.84%)",
+            "previsione3Mesi": {
+                "label": "AUMENTO MODERATO",
+                "icon": "arrow-up",
+                "iconColor": "green",
+                "range": "(+2%/4%)"
+            },
+            "cc":{
+                "arete": "435 – 458",
+                "off": "435 – 458"
+            },
+            "mr":{
+                "arete": "439 – 457",
+                "off": "439 – 457"
+            },
+            "cs":{
+                "arete": "406 – 426",
+                "off": "408 – 429"
+            }
+        },
+        {
+            "piazza": "Matif €/t",
+            "prezzoMedioCampagna": "209,48",
+            "ultimoPrezzo": "03/06/2025 17:42 182,00 (-12.00 / -6.19%)",
+            "previsione3Mesi": {
+                "label": "AUMENTO MODERATO",
+                "icon": "arrow-up",
+                "iconColor": "green",
+                "range": "(+9%/4%)"
+            },
+            "cc":{
+                "arete": "435 – 458",
+                "off": "435 – 458"
+            },
+            "mr":{
+                "arete": "439 – 457",
+                "off": "439 – 457"
+            },
+            "cs":{
+                "arete": "406 – 426",
+                "off": "408 – 429"
+            }
+        },
+        {
+            "piazza": "Bologna €/t",
+            "prezzoMedioCampagna": "232,32",
+            "ultimoPrezzo": "04/06/2025 00:00 0,00 (+0.00 / +0.00%)",
+            "previsione3Mesi": {
+                "label": "",
+                "icon": "",
+                "iconColor": "",
+                "range": ""
+            },
+            "cc":{
+                "arete": "435 – 458",
+                "off": "435 – 458"
+            },
+            "mr":{
+                "arete": "439 – 457",
+                "off": "439 – 457"
+            },
+            "cs":{
+                "arete": "406 – 426",
+                "off": "408 – 429"
+            }
+        }
+    ]
+}
+
