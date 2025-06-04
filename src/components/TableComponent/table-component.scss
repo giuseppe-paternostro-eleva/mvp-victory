@@ -1,69 +1,113 @@
 .forecast-table {
-    max-width: 1200px;
-    padding: 1rem;
-    background-color: rgb(255, 255, 255);
-    border: 1px solid #ccc;
-    border-radius: 10px;
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-family: 'Segoe UI', sans-serif;
-    font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  font-family: "Segoe UI", sans-serif;
+  padding: 1rem;
+  margin: 1rem;
+  border: 1px solid #cecece;
+  border-radius: 10px;
 
-    thead th {
-      text-align: center;
+  .head-table {
+    display: grid;
+    grid-template-columns: minmax(140px, 1fr) // piazza
+      minmax(120px, 1fr) // prezzo medio
+      minmax(120px, 1fr) // ultimo prezzo
+      minmax(140px, 1fr) // previsione 3 mesi
+      repeat(3, minmax(90px, 1fr)); // cc, mr, cs
+    gap: 1px;
+    background: #eee;
+
+    .head-cell {
+      background: white;
       padding: 0.5rem;
-      border-bottom: 2px solid #333;
-        vertical-align: baseline;
-
-      .th-title {
-        font-weight: 600;
-      }
-
-      .th-subtitle {
-        font-size: 11px;
-        color: #777;
-        margin-top: 0.2rem;
-      }
-    }
-
-    tbody {
-      tr {
-        &:nth-child(odd) {
-          background-color: #f9f9f9;
-        }
-      }
-    }
-
-    tbody td {
-      text-align: center;
-      padding: 0.7rem 0.5rem;
-    //   border-bottom: 1px solid #333;
-      vertical-align: middle;
-      min-height: 3rem;
-      &:hover{
-        background-color: #f0f0f0;
-      }
-    }
-
-    .forecast-cell {
       display: flex;
       flex-direction: column;
+      justify-content: center;
       align-items: center;
+      border: 1px solid #cecece;
 
-      .label {
-        font-weight: 600;
-        margin-bottom: 2px;
+      &.title-cell {
+        grid-row: 1 / 2;
+        grid-column: span 1;
       }
 
-      .icon {
-        margin-bottom: 2px;
+      &.title-cell.has-children {
+        grid-column: span 3;
       }
 
-      .range {
-        font-size: 11px;
-        color: #333;
+      &.subtitle-cell {
+        grid-row: 2 / 3;
+        grid-column: span 1;
+      }
+
+      &.child-column {
+        grid-row: 2 / 3;
+        // viene gestita dalla mappatura dinamica
       }
     }
+  }
+  .body-table {
+    display: flex;
+    flex-direction: column;
+    .body-row {
+      display: grid;
+      grid-template-columns: minmax(140px, 1fr) // piazza
+        minmax(120px, 1fr) // prezzo medio
+        minmax(120px, 1fr) // ultimo prezzo
+        minmax(140px, 1fr) // previsione 3 mesi
+        repeat(3, minmax(90px, 1fr)); // cc, mr, cs
+      gap: 1px;
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+
+      .body-cell {
+        padding: 0.75rem;
+        font-size: 14px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        border-right: 1px solid #eee;
+
+        .arete {
+          font-weight: bold;
+          color: #333;
+        }
+
+        .off {
+          font-size: 13px;
+          color: #888;
+        }
+
+        .label {
+          font-weight: bold;
+          margin-bottom: 0.3rem;
+        }
+
+        .icon {
+          margin-bottom: 0.3rem;
+        }
+
+        .range {
+          font-size: 12px;
+          color: #666;
+        }
+      }
+
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+  }
+}
+@media (max-width: 768px) {
+  .head-table,
+  .body-row {
+    grid-template-columns:
+      minmax(100px, 1fr)
+      minmax(100px, 1fr)
+      minmax(100px, 1fr)
+      minmax(100px, 1fr)
+      repeat(3, minmax(80px, 1fr));
   }
 }
