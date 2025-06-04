@@ -5,7 +5,7 @@ import "./table-component.scss";
 // -- SERVICE
 import { fetchForecastTable } from "../../api/fetchForecastTable";
 // -- ICONS
-import { ArrowUp, ArrowDown, ArrowRight } from "lucide-react";
+import { ArrowUp, ArrowDown, Equal } from "lucide-react";
 
 const getIconComponent = (icon: string, color: string) => {
   switch (icon) {
@@ -13,8 +13,8 @@ const getIconComponent = (icon: string, color: string) => {
       return <ArrowUp color={color} size={14} />;
     case "arrow-down":
       return <ArrowDown color={color} size={14} />;
-    case "arrow-right":
-      return <ArrowRight color={color} size={14} />;
+    case "equals":
+      return <Equal color={color} size={14} />;
     default:
       return null;
   }
@@ -22,7 +22,7 @@ const getIconComponent = (icon: string, color: string) => {
 
 type dataTableType = {
   columns: columnType[];
-  rows: any[];
+  rows: rowType[];
   tableType: string;
 };
 
@@ -32,6 +32,27 @@ type columnType = {
   subTitle: string | string[];
   children?: columnType[];
 };
+
+type rowType = {
+    key:string;
+    piazza:string;
+    previsione3Mesi: {
+      label: string;
+      icon: string;
+      iconColor: string;
+      range: string;
+    };
+    previsioniPrezzoMedio: {
+      [key: string]: {
+        arete: string;
+        off: string;
+      };
+    };
+    prezzoMedioCampagna:string;
+    piazzaTooltip:string;
+    [key: string]: any; 
+  };
+
 
 export const TableComponent: FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
