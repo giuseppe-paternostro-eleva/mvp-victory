@@ -7,6 +7,7 @@ import { fetchForecastTable } from "../../api/fetchForecastTable";
 // -- ICONS
 import { ArrowUp, ArrowDown, Equal } from "lucide-react";
 import { isArray } from "lodash";
+import { Loader } from "../loader/Loader";
 
 type dataTableType = {
   columns: columnType[];
@@ -44,11 +45,11 @@ type rowType = {
 const getIconComponent = (icon: string, color: string) => {
   switch (icon) {
     case "arrow-up":
-      return <ArrowUp color={color} size={14} />;
+      return <ArrowUp color={color} size={18} />;
     case "arrow-down":
-      return <ArrowDown color={color} size={14} />;
+      return <ArrowDown color={color} size={18} />;
     case "equals":
-      return <Equal color={color} size={14} />;
+      return <Equal color={color} size={18} />;
     default:
       return null;
   }
@@ -58,6 +59,7 @@ export const TableComponent: FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<boolean>(false);
   const [dataTable, setDataTable] = useState<dataTableType | null>(null);
+  const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -80,103 +82,131 @@ export const TableComponent: FC = () => {
   }, []);
 
   return (
-    <div className="forecast-table">
-      <div className="head-table">
-        {/* ROW 1: Titoli principali */}
-        {dataTable?.columns?.flatMap((col, idx) => {
-          if (col?.children) {
-            return (
-              <div className="head-cell title-cell has-children" key={idx}>
-                <h2 className="title">{col.title}</h2>
-                <div className="extra-title-container">
-                  {Array.isArray(col?.subTitle) &&
-                    col.subTitle.map((sub, i) => (
-                      <h5 className="extra-title" key={i}>
-                        {sub}
-                      </h5>
-                    ))}
+    <div className="mainContainer">
+      <div className={`forecast-table ${darkMode ? "dark-mode" : ""}`}>
+        {loading && <Loader/>}
+        <div className="head-table">
+          {/* ROW 1: Titoli principali */}
+          {dataTable?.columns?.flatMap((col, idx) => {
+            if (col?.children) {
+              return (
+                <div className="head-cell title-cell has-children" key={idx}>
+                  <h2 className="title">{col.title}</h2>
+                  <div className="extra-title-container">
+                    {Array.isArray(col?.subTitle) &&
+                      col.subTitle.map((sub, i) => (
+                        <h5 className="extra-title" key={i}>
+                          {sub}
+                        </h5>
+                      ))}
+                  </div>
                 </div>
-              </div>
-            );
-          } else {
-            return (
-              <div className="head-cell title-cell" key={idx}>
-                <h2 className="title">{col.title}</h2>
-                <div className="extra-title-container">
-                  {Array.isArray(col?.subTitle) &&
-                    col.subTitle.map((sub, i) => (
-                      <h5 className="extra-title" key={i}>
-                        {sub}
-                      </h5>
-                    ))}
+              );
+            } else {
+              return (
+                <div className="head-cell title-cell" key={idx}>
+                  <h2 className="title">{col.title}</h2>
+                  <div className="extra-title-container">
+                    {Array.isArray(col?.subTitle) &&
+                      col.subTitle.map((sub, i) => (
+                        <h5 className="extra-title" key={i}>
+                          {sub}
+                        </h5>
+                      ))}
+                  </div>
                 </div>
-              </div>
-            );
-          }
-        })}
+              );
+            }
+          })}
 
-        {/* ROW 2: Sottotitoli */}
-        {dataTable?.columns?.flatMap((col, idx) => {
-          if (col?.children) {
-            return col.children.map((child, i) => (
-              <div className="head-cell child-column" key={`${idx}-${i}`}>
-                <h4>{child.title}</h4>
-                <h6>{child.subTitle}</h6>
+          {/* ROW 2: Sottotitoli */}
+          {dataTable?.columns?.flatMap((col, idx) => {
+            if (col?.children) {
+              return col.children.map((child, i) => (
+                <div className="head-cell child-column" key={`${idx}-${i}`}>
+                  <h4>{child.title}</h4>
+                  <h6>{child.subTitle}</h6>
+                </div>
+              ));
+            } else {
+              return (
+                <div className="head-cell subtitle-cell" key={idx}>
+                  <h4>{col.subTitle}</h4>
+                </div>
+              );
+            }
+          })}
+        </div>
+        <div className="body-table">
+          {dataTable?.rows.map((row, rowIdx) => (
+            <div className="body-row" key={rowIdx}>
+              {/* Colonna 1: piazza */}
+              <div className="body-cell">
+                <div
+                  className="body-cell tooltip-cell"
+                  data-tooltip={row?.piazzaTooltip}
+                ></div>
+                <span title={row?.piazzaTooltip}>{row?.piazza}</span>
               </div>
-            ));
-          } else {
-            return (
-              <div className="head-cell subtitle-cell" key={idx}>
-                <h4>{col.subTitle}</h4>
+
+              {/* Colonna 2: prezzo medio campagna */}
+              <div className="body-cell">
+                {" "}
+                <div
+                  className="body-cell tooltip-cell"
+                  data-tooltip={row?.piazzaTooltip}
+                ></div>
+                {row?.prezzoMedioCampagna}
               </div>
-            );
-          }
-        })}
-      </div>
-      <div className="body-table">
-        {dataTable?.rows.map((row, rowIdx) => (
-          <div className="body-row" key={rowIdx}>
-            {/* Colonna 1: piazza */}
-            <div className="body-cell">
-              <span title={row.piazzaTooltip}>{row.piazza}</span>
+
+              {/* Colonna 3: ultimo prezzo */}
+              <div className="body-cell">
+                {" "}
+                <div
+                  className="body-cell tooltip-cell"
+                  data-tooltip={row?.piazzaTooltip}
+                ></div>
+                {row?.ultimoPrezzo}
+              </div>
+
+              {/* Colonna 4: previsione 3 mesi */}
+              <div className="body-cell forecast-cell">
+                {row?.previsione3Mesi?.label && (
+                  <div className="label">{row?.previsione3Mesi.label}</div>
+                )}
+                {row?.previsione3Mesi?.icon && (
+                  <div className="icon">
+                    {getIconComponent(
+                      row?.previsione3Mesi.icon,
+                      row?.previsione3Mesi.iconColor
+                    )}
+                  </div>
+                )}
+                {row?.previsione3Mesi?.range && (
+                  <div className="range">{row?.previsione3Mesi.range}</div>
+                )}
+              </div>
+
+              {/* Colonne 5-7: previsioni prezzo medio (cc, mr, cs) */}
+              {row?.previsioniPrezzoMedio &&
+                Object.entries(row?.previsioniPrezzoMedio).map(
+                  ([key, item], idx) => (
+                    <div className="body-cell" key={idx}>
+                      <div className="arete">{item.arete}</div>
+                      <div className="off">{item.off}</div>
+                    </div>
+                  )
+                )}
             </div>
-
-            {/* Colonna 2: prezzo medio campagna */}
-            <div className="body-cell">{row.prezzoMedioCampagna}</div>
-
-            {/* Colonna 3: ultimo prezzo */}
-            <div className="body-cell">{row.ultimoPrezzo}</div>
-
-            {/* Colonna 4: previsione 3 mesi */}
-            <div className="body-cell forecast-cell">
-              {row.previsione3Mesi?.label && (
-                <div className="label">{row.previsione3Mesi.label}</div>
-              )}
-              {row.previsione3Mesi?.icon && (
-                <div className="icon">
-                  {getIconComponent(
-                    row.previsione3Mesi.icon,
-                    row.previsione3Mesi.iconColor
-                  )}
-                </div>
-              )}
-              {row.previsione3Mesi?.range && (
-                <div className="range">{row.previsione3Mesi.range}</div>
-              )}
-            </div>
-
-            {/* Colonne 5-7: previsioni prezzo medio (cc, mr, cs) */}
-            {row.previsioniPrezzoMedio &&
-              Object.entries(row.previsioniPrezzoMedio).map(([key, item], idx) => (
-                <div className="body-cell" key={idx}>
-                  <div className="arete">{item.arete}</div>
-                  <div className="off">{item.off}</div>
-                </div>
-              ))}
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
+      <button
+        className="buttonDark"
+        onClick={() => setDarkMode((prev) => !prev)}
+      >
+        Toggle Dark Mode
+      </button>
     </div>
   );
 };
-
